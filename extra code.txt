@@ -1,0 +1,51 @@
+import numpy as np
+import random
+from tensorflow.keras.preprocessing.image import img_to_array, load_img
+import sys
+from PIL import Image
+
+# Let's define a new Model that will take an image as input, and will output
+# intermediate representations for all layers in the previous model after
+# the first.
+successive_outputs = [layer.output for layer in model.layers[1:]]
+# visualization model = Model(img_input, successive_outputs)
+visualization_model = tf.keras.models.Model(
+    inputs=model.input, outputs=successive_outputs
+)
+img = cv2.imread("/content/download.jpg")
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+img = cv2.resize(img, (512, 512))
+X = img_to_array(img)  # Numpy array with shape (512,512, 3)
+X = X.reshape((1,) + X.shape)  # Numpy array with shape (1, 512, 512, 3)
+# Rescale by 1/255 25
+X /= 255
+# Let's run our image through our network, thus obtaining all
+# intermediate representations for this image.
+successive_feature_maps = model.predict(X)
+print(successive_feature_maps)
+# These are the names of the Layers, so can have them as part of our plot
+layer_names = [layer.name for layer in model.layers]
+layer_names = [layer.name for layer in model.layers]
+# Now let's display our representations
+for layer_name, feature_map in zip(layer_names, successive_feature_maps):
+    if len(feature_map.shape) == 4:
+        # Just do this for the conv / maxpool Layers, not the fully-connected Layers
+        n_features = feature_map.shape[-1]  # number of features in feature map
+        size = feature_map.shape[1]
+        # We will tile our images in this matrix
+        display_grid = np.zeros((size, size * n_features))
+        for i in range(n_features):
+            x = feature_map[0, :, :, i]
+            x = x.mean()
+            X /= x.std()
+            X *= 64
+            X += 128
+            x = np.clip(x, 0, 255).astype("uint8")
+            # We'll tile each filter into this big horizontal grid
+            display_grid[:, i * size : (i + 1) * size] = x
+        # Display the grid
+        scale = 20.0 / n_features
+        plt.figure(figsize=(scale * n_features, scale))
+        plt.title(layer_name)
+        plt.grid(False)
+        plt.imshow(display_grid, aspect="auto", cmap="viridis")
